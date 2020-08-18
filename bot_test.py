@@ -28,12 +28,20 @@ def agent(obs,config):
     # If there are no ships, use first shipyard to spawn a ship.
     if len(me.ships) == 0 and len(me.shipyards) > 0:
         me.shipyards[0].next_action = ShipyardAction.SPAWN
+    
+    if board.step == 100:
+        print("check for position of shipyard")
+        print(me.shipyards[0].position)
+        print("new shippe to be spawned")
+        if me.shipyards[0].position != me.ships[0].position:
+            me.shipyards[0].next_action = ShipyardAction.SPAWN
 
     # If there are no shipyards, convert first ship into shipyard.
     if len(me.shipyards) == 0 and len(me.ships) > 0:
         me.ships[0].next_action = ShipAction.CONVERT
     
     for ship in me.ships:
+
         if ship.next_action == None:
             
             ### Part 1: Set the ship's state 
