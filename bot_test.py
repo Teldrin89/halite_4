@@ -17,6 +17,7 @@ directions = [ShipAction.NORTH, ShipAction.EAST, ShipAction.SOUTH, ShipAction.WE
 # Will keep track of whether a ship is collecting halite or carrying cargo to a shipyard
 ship_states = {}
 
+
 def agent(obs,config):
     
     size = config.size
@@ -24,20 +25,50 @@ def agent(obs,config):
     me = board.current_player
     
     
+    board_halite = obs['halite']
+    list_halite = []
+    for i in range(size):
+        temp_list = []
+        for j in range(size):
+            temp_list.append(board_halite[i+(j*21)])
+        list_halite.append(temp_list)
     
+    #TODO: add avoiding collision with my own ships and deterministic collisions with foreign
+
+    if size%2 == 1:
+        corner_size = int((size-1)/2)
+    else:
+        corner_size = int(size/2)
+    
+    max_halite_value = 0
+    max_halite_pos = [corner_size/2, corner_size/2]
+    for i in range(corner_size):
+        for j in range(corner_size):
+            if list_halite[i][j] > max_halite_value:
+                max_halite_value = list_halite[i][j]
+                max_halite_pos = [i,j]
+
+
+    if board.step == 10:
+        print(obs)
+        print(list_halite)
+        print("max halite value:{}, max halite pos:{}".format(max_halite_value, max_halite_pos))
+        
+
     # If there are no ships, use first shipyard to spawn a ship.
     if len(me.ships) == 0 and len(me.shipyards) > 0:
         me.shipyards[0].next_action = ShipyardAction.SPAWN
     
-    if board.step == 100:
-        print("check for position of shipyard")
-        print(me.shipyards[0].position)
-        print("new shippe to be spawned")
-        if me.shipyards[0].position != me.ships[0].position:
-            me.shipyards[0].next_action = ShipyardAction.SPAWN
+    # if board.step == 100:
+    #     print("check for position of shipyard")
+    #     print(me.shipyards[0].position)
+    #     print("new shippe to be spawned")
+    #     if me.shipyards[0].position != me.ships[0].position:
+    #         me.shipyards[0].next_action = ShipyardAction.SPAWN
 
     # If there are no shipyards, convert first ship into shipyard.
     if len(me.shipyards) == 0 and len(me.ships) > 0:
+        # ship.next_action = directions[]
         me.ships[0].next_action = ShipAction.CONVERT
     
     for ship in me.ships:
@@ -45,11 +76,12 @@ def agent(obs,config):
         if ship.next_action == None:
             
             ### Part 1: Set the ship's state 
-            if ship.halite < 200: # If cargo is too low, collect halite
+            if ship.halite < 100: # If cargo is too low, collect halite
                 ship_states[ship.id] = "COLLECT"
-            if ship.halite > 500: # If cargo gets very big, deposit halite
+            if ship.halite > 600: # If cargo gets very big, deposit halite
                 ship_states[ship.id] = "DEPOSIT"
-                
+
+
             ### Part 2: Use the ship's state to select an action
             if ship_states[ship.id] == "COLLECT":
                 # If halite at current location running low, 
@@ -57,11 +89,17 @@ def agent(obs,config):
                 if ship.cell.halite < 100:
                     neighbors = [ship.cell.north.halite, ship.cell.east.halite, 
                                  ship.cell.south.halite, ship.cell.west.halite]
-                    best = max(range(len(neighbors)), key=neighbors.__getitem__)
-                    ship.next_action = directions[best]
+                    if max(neighbors) < 100:
+                        direction = getDirTo(ship.position, max_halite_pos, size)
+                        if direction: ship.next_action = direction
+                    else:
+                        best = max(range(len(neighbors)), key=neighbors.__getitem__)
+                        ship.next_action = directions[best]
             if ship_states[ship.id] == "DEPOSIT":
                 # Move towards shipyard to deposit cargo
                 direction = getDirTo(ship.position, me.shipyards[0].position, size)
                 if direction: ship.next_action = direction
-                
+        
+        if board.step == 10:
+            print("ship current position{}".format(ship.cell.position))
     return me.next_actions
